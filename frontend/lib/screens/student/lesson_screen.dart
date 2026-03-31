@@ -97,7 +97,7 @@ Everything in an ecosystem is connected. For example, if it gets too hot, some p
             ),
             const SizedBox(width: 8),
             const Text(
-              'Elevate AI',
+              'Saamya AI',
               style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppTheme.textPrimary),
             ),
           ],

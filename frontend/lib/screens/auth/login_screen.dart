@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
+import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 import 'create_account_screen.dart';
 import '../main_nav.dart';
+import '../student/blind_dashboard_screen.dart';
+import '../teacher/teacher_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -23,14 +28,59 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() {
+  Future<void> _handleLogin() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields'), behavior: SnackBarBehavior.floating),
       );
       return;
     }
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainNav()));
+    setState(() => _isLoading = true);
+    try {
+      final user = await ApiService.login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+      await AuthService.saveSession(user);
+      if (mounted) {
+        final role = user['role']?.toString() ?? '';
+        if (role.toLowerCase() == 'teacher') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const TeacherDashboardScreen()),
+          );
+          return;
+        }
+
+        final disabilityRaw = user['disability']?.toString().toLowerCase() ?? '';
+        final disability = disabilityRaw.split('|').first;
+        final isBlind = disability == 'visual' || disability == 'blind';
+        
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => isBlind ? const BlindDashboardScreen() : const MainNav(),
+          ),
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message), behavior: SnackBarBehavior.floating),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not connect to server. Is the backend running?'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _handleGoogleSignIn() async {
@@ -144,21 +194,27 @@ class _LoginScreenState extends State<LoginScreen> {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: _handleLogin,
+              onPressed: _isLoading ? null : _handleLogin,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.brandPrimary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
                 elevation: 2,
               ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('Log In', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                  SizedBox(width: 8),
-                  Icon(Icons.arrow_forward, size: 18),
-                ],
-              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Log In', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                        SizedBox(width: 8),
+                        Icon(Icons.arrow_forward, size: 18),
+                      ],
+                    ),
             ),
           ),
           const SizedBox(height: 28),

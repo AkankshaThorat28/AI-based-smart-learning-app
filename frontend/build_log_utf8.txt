@@ -1,0 +1,71 @@
+﻿Running Gradle task 'assembleRelease'...                        
+flutter : e: file:///C:/fl
+utter/packages/flutter_too
+ls/gradle/src/main/kotlin/
+FlutterPlugin.kt:749:21 
+Unresolved reference: 
+filePermissions
+At line:1 char:1
++ flutter build apk > 
+build_log.txt 2>&1 ; cat 
+build_log.txt
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (e  
+  : file:///C:/f...file   
+ Permissions:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+e: file:///C:/flutter/pack
+ages/flutter_tools/gradle/
+src/main/kotlin/FlutterPlu
+gin.kt:750:25 Unresolved 
+reference: user
+e: file:///C:/flutter/pack
+ages/flutter_tools/gradle/
+src/main/kotlin/FlutterPlu
+gin.kt:751:29 Unresolved 
+reference: read
+e: file:///C:/flutter/pack
+ages/flutter_tools/gradle/
+src/main/kotlin/FlutterPlu
+gin.kt:752:29 Unresolved 
+reference: write
+
+FAILURE: Build failed 
+with an exception.
+
+* What went wrong:
+Execution failed for task 
+':gradle:compileKotlin'.
+> A failure occurred 
+while executing org.jetbra
+ins.kotlin.compilerRunner.
+GradleCompilerRunnerWithWo
+rkers$GradleKotlinCompiler
+WorkAction
+   > Compilation error. 
+See log for more details
+
+* Try:
+> Run with --stacktrace 
+option to get the stack 
+trace.
+> Run with --info or 
+--debug option to get 
+more log output.
+> Run with --scan to get 
+full insights.
+
+* Get more help at 
+https://help.gradle.org
+
+BUILD FAILED in 2s
+Running Gradle task 'assembleRelease'...                            3.3s
+Gradle task 
+assembleRelease failed 
+with exit code 1

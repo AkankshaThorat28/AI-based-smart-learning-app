@@ -5,6 +5,13 @@ import 'student/student_home.dart';
 import 'student/study_material.dart';
 import 'student/ai_chatbot.dart';
 import 'student/student_settings.dart';
+import 'student/achievements_screen.dart';
+import 'student/profile_screen.dart';
+import '../services/auth_service.dart';
+import 'auth/login_screen.dart';
+import '../utils/tr.dart';
+import 'package:provider/provider.dart';
+import '../providers/accessibility_provider.dart';
 
 class MainNav extends StatefulWidget {
   const MainNav({super.key});
@@ -238,14 +245,24 @@ class _MainNavState extends State<MainNav> with SingleTickerProviderStateMixin {
           ),
           const SizedBox(width: 10),
           const Text(
-            'Elevate AI',
+            'Saamya AI',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary, letterSpacing: -0.3),
           ),
           const Spacer(),
+          if (!Provider.of<AccessibilityProvider>(context).zenMode) ...[
+            _buildHeaderIcon(
+              Icons.emoji_events_rounded,
+              'Achievements'.tr(context),
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const AchievementsScreen()));
+              },
+            ),
+            const SizedBox(width: 4),
+          ],
           Builder(
             builder: (headerContext) => _buildHeaderIcon(
               Icons.access_time_filled_outlined,
-              'Reminders',
+              'Reminders'.tr(context),
               badgeCount: _reminderItems.length,
               onTap: () => _showRemindersPanel(headerContext),
             ),
@@ -259,6 +276,48 @@ class _MainNavState extends State<MainNav> with SingleTickerProviderStateMixin {
               onTap: () => _showNotificationsPanel(headerContext),
             ),
           ),
+          const SizedBox(width: 4),
+          InkWell(
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+            borderRadius: BorderRadius.circular(16),
+            child: const CircleAvatar(
+              radius: 14,
+              backgroundColor: AppTheme.brandPrimary,
+              child: Icon(Icons.person, size: 16, color: Colors.white),
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.black54, size: 20),
+            tooltip: 'Logout',
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: Text('Logout'.tr(context)),
+                  content: Text('Are you sure you want to sign out?'.tr(context)),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel'.tr(context))),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: Text('Logout'.tr(context), style: const TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed == true) {
+                await AuthService.logout();
+                if (mounted) {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
+                  );
+                }
+              }
+            },
+          ),
+
           const SizedBox(width: 4),
           Container(
             width: 34, height: 34,
@@ -344,7 +403,7 @@ class _MainNavState extends State<MainNav> with SingleTickerProviderStateMixin {
                       key: ValueKey(isActive),
                       color: isActive ? AppTheme.brandPrimary : AppTheme.textTertiary,
                       size: 24,
-                      semanticLabel: tab.label,
+                      semanticLabel: tab.label.tr(context),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -355,7 +414,7 @@ class _MainNavState extends State<MainNav> with SingleTickerProviderStateMixin {
                       fontSize: 10,
                       fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
                     ),
-                    child: Text(tab.label),
+                    child: Text(tab.label.tr(context)),
                   ),
                 ],
               ),
@@ -421,7 +480,7 @@ class _DropdownPanel extends StatelessWidget {
               children: [
                 Icon(icon, size: 18, color: accentColor),
                 const SizedBox(width: 10),
-                Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                Text(title.tr(context), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                 const Spacer(),
                 if (!isEmpty)
                   Container(
@@ -447,7 +506,7 @@ class _DropdownPanel extends StatelessWidget {
                 children: [
                   Icon(emptyIcon, size: 36, color: Colors.grey.shade300),
                   const SizedBox(height: 10),
-                  Text(emptyMessage, style: TextStyle(fontSize: 13, color: AppTheme.textTertiary, fontWeight: FontWeight.w500)),
+                  Text(emptyMessage.tr(context), style: const TextStyle(fontSize: 13, color: AppTheme.textTertiary, fontWeight: FontWeight.w500)),
                 ],
               ),
             )

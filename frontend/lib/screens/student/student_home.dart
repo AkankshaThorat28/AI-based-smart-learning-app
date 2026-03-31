@@ -1,9 +1,13 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/accessibility_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/app_alerts.dart';
 import 'study_material.dart';
 import 'take_test_screen.dart';
+import '../../services/auth_service.dart';
+import '../../utils/tr.dart';
 
 class StudentHome extends StatefulWidget {
   final ValueChanged<int> onNavigateTab;
@@ -20,13 +24,14 @@ class _StudentHomeState extends State<StudentHome> with TickerProviderStateMixin
   late AnimationController _streakController;
   late Animation<double> _streakBounce;
 
-  final String _studentName = 'Alex';
+  String _studentName = 'User';
   final double _goalProgress = 0.375; // 45min / 120min
   final int _streakDays = 7;
 
   @override
   void initState() {
     super.initState();
+    _loadUser();
     _progressController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
     _progressAnimation = Tween<double>(begin: 0, end: _goalProgress).animate(
       CurvedAnimation(parent: _progressController, curve: Curves.easeOutCubic),
@@ -42,6 +47,11 @@ class _StudentHomeState extends State<StudentHome> with TickerProviderStateMixin
     });
   }
 
+  Future<void> _loadUser() async {
+    final name = await AuthService.getUserName();
+    if (mounted) setState(() => _studentName = name);
+  }
+
   @override
   void dispose() {
     _progressController.dispose();
@@ -51,6 +61,7 @@ class _StudentHomeState extends State<StudentHome> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
+    final a11y = context.watch<AccessibilityProvider>();
     return ScrollConfiguration(
       behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
       child: SingleChildScrollView(
@@ -60,15 +71,19 @@ class _StudentHomeState extends State<StudentHome> with TickerProviderStateMixin
           children: [
             _buildGreeting(),
             const SizedBox(height: 24),
-            _buildGoalsCard(),
-            const SizedBox(height: 20),
+            if (!a11y.zenMode) ...[
+              _buildGoalsCard(),
+              const SizedBox(height: 20),
+            ],
             _buildContinueLessonCard(),
             const SizedBox(height: 24),
             _buildSectionTitle('Scheduled Tests & Quizzes'),
             const SizedBox(height: 12),
             _buildScheduledTests(),
-            const SizedBox(height: 24),
-            _buildStreakWidget(),
+            if (!a11y.zenMode) ...[
+              const SizedBox(height: 24),
+              _buildStreakWidget(),
+            ],
           ],
         ),
       ),
@@ -84,13 +99,13 @@ class _StudentHomeState extends State<StudentHome> with TickerProviderStateMixin
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Welcome back, $_studentName 👋',
+                '${'Welcome back'.tr(context)}, $_studentName 👋',
                 style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppTheme.textPrimary, letterSpacing: -0.5),
               ),
               const SizedBox(height: 4),
-              const Text(
-                'Ready to conquer today\'s goals?',
-                style: TextStyle(fontSize: 14, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
+              Text(
+                "Ready to conquer today's goals?".tr(context),
+                style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
               ),
             ],
           ),
@@ -126,13 +141,13 @@ class _StudentHomeState extends State<StudentHome> with TickerProviderStateMixin
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Today's Goals", style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1)),
+                Text("Today's Goals".tr(context), style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1)),
                 const SizedBox(height: 12),
-                _buildGoalRow('🎯 Goal', '2 hours'),
+                _buildGoalRow('🎯 Goal'.tr(context), '2 hours'),
                 const SizedBox(height: 6),
-                _buildGoalRow('✅ Done', '45 mins'),
+                _buildGoalRow('✅ Done'.tr(context), '45 mins'),
                 const SizedBox(height: 6),
-                _buildGoalRow('⏳ Left', '1h 15m'),
+                _buildGoalRow('⏳ Left'.tr(context), '1h 15m'),
               ],
             ),
           ),
@@ -220,7 +235,7 @@ class _StudentHomeState extends State<StudentHome> with TickerProviderStateMixin
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Continue Lesson', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.brandPrimary, letterSpacing: 1.5)),
+                    Text('Continue Lesson'.tr(context), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.brandPrimary, letterSpacing: 1.5)),
                     const SizedBox(height: 4),
                     const Text('Introduction to Algebra', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                     const SizedBox(height: 2),
@@ -237,7 +252,7 @@ class _StudentHomeState extends State<StudentHome> with TickerProviderStateMixin
   }
 
   Widget _buildSectionTitle(String title) {
-    return Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary));
+    return Text(title.tr(context), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary));
   }
 
   Widget _buildScheduledTests() {
@@ -305,7 +320,7 @@ class _StudentHomeState extends State<StudentHome> with TickerProviderStateMixin
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
                       ),
-                      child: Text(test['isLive'] == true ? 'Take Test' : 'Remind Me'),
+                      child: Text(test['isLive'] == true ? 'Take Test'.tr(context) : 'Remind Me'.tr(context)),
                     ),
                   ),
                 ],

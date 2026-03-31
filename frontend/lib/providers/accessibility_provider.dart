@@ -7,6 +7,8 @@ class AccessibilityProvider extends ChangeNotifier {
   bool _highContrast = false;
   bool _dyslexiaFont = false;
   bool _zenMode = false;
+  String _language = 'en'; // 'en', 'hi'
+
 
   // --- Disability type ---
   String _disabilityType = 'none'; // 'none', 'visual', 'deaf', 'voice'
@@ -27,6 +29,8 @@ class AccessibilityProvider extends ChangeNotifier {
   // --- Auditory settings ---
   bool _visualAlerts = false;
   bool _closedCaptions = false;
+  String get language => _language;
+
 
   // --- Getters ---
   String get disabilityType => _disabilityType;
@@ -64,6 +68,8 @@ class AccessibilityProvider extends ChangeNotifier {
     _voiceNavigation = prefs.getBool('voiceNavigation') ?? false;
     _visualAlerts = prefs.getBool('visualAlerts') ?? false;
     _closedCaptions = prefs.getBool('closedCaptions') ?? false;
+    _language = prefs.getString('language') ?? 'en';
+
     notifyListeners();
   }
 
@@ -152,6 +158,65 @@ class AccessibilityProvider extends ChangeNotifier {
     notifyListeners();
     _save('closedCaptions', _closedCaptions);
   }
+
+  void setLanguage(String lang) {
+    _language = lang;
+    notifyListeners();
+    _save('language', lang);
+  }
+
+  // --- Translations Map ---
+  static const Map<String, String> _hiDict = {
+    'Home': 'मुख्य पृष्ठ',
+    'Study Material': 'अध्ययन सामग्री',
+    'AI Chatbot': 'एआई चैटबॉट',
+    'Settings': 'सेटिंग्स',
+    'Logout': 'लॉग आउट',
+    'Notifications': 'सूचनाएं',
+    'Reminders': 'रिमाइंडर',
+    'Achievements': 'उपलब्धियां',
+    'Welcome back': 'वापसी पर स्वागत है',
+    "Ready to conquer today's goals?": 'आज के लक्ष्यों को पूरा करने के लिए तैयार हैं?',
+    "Today's Goals": 'आज के लक्ष्य',
+    '🎯 Goal': '🎯 लक्ष्य',
+    '✅ Done': '✅ पूरा हुआ',
+    '⏳ Left': '⏳ शेष',
+    'Continue Lesson': 'पाठ जारी रखें',
+    'Scheduled Tests & Quizzes': 'निर्धारित परीक्षण और प्रश्नोत्तरी',
+    'Take Test': 'परीक्षा दें',
+    'Remind Me': 'मुझे याद दिलाएं',
+    'Customize your experience': 'अपना अनुभव अनुकूलित करें',
+    'Account & Profile': 'खाता और प्रोफ़ाइल',
+    'Email': 'ईमेल',
+    'Contact': 'संपर्क',
+    'Password': 'पासवर्ड',
+    'Visual Accessibility': 'दृश्य पहुंच',
+    'Typography': 'टंकण',
+    'Audio & Voice Guidance': 'ध्वनि नेविगेशन',
+    'Language / भाषा': 'भाषा / Language',
+    'Downloaded Content': 'डाउनलोड की गई सामग्री',
+    'App Language': 'ऐप की भाषा',
+    'Zen Mode': 'ज़ेन मोड',
+    'High Contrast': 'अधिक कंट्रास्ट',
+    'Dyslexia-Friendly Font': 'डिस्लेक्सिया फ़ॉन्ट',
+    'Text Scaling': 'टेक्स्ट का आकार',
+    'Voice Navigation': 'आवाज़ से चलायें',
+    'Closed Captions': 'कैप्शन दिखाएं',
+    'No active reminders': 'कोई रिमाइंडर नहीं',
+    'No new notifications': 'कोई नई सूचना नहीं',
+  };
+
+  String tr(String text) {
+    if (_language == 'hi') {
+      return _hiDict[text] ?? text;
+    }
+    return text;
+  }
+
+  String translate(String en, String hi) {
+    return _language == 'hi' ? hi : en;
+  }
+
 
   /// Apply sensible defaults based on the user's disability type.
   /// Called once during account creation.

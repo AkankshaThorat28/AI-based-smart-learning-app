@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/app_alerts.dart';
 import 'take_test_screen.dart';
+import '../../services/auth_service.dart';
 
 class StudyMaterial extends StatefulWidget {
   const StudyMaterial({super.key});
@@ -12,60 +13,83 @@ class StudyMaterial extends StatefulWidget {
 }
 
 class _StudyMaterialState extends State<StudyMaterial> {
-  final List<Map<String, dynamic>> _materials = [
-    {
-      'title': 'Midterm Practice Test',
-      'subject': 'Mathematics',
-      'teacher': 'Mr. Anderson',
-      'date': 'Available Now',
-      'color': const Color(0xFFE53935),
-      'icon': Icons.assignment,
-      'isNew': true,
-      'isTest': true,
-      'description': 'A comprehensive practice test covering algebra, geometry, and trigonometry topics from chapters 1–8.',
-    },
-    {
-      'title': 'Quadratic Equations Guide',
-      'subject': 'Mathematics',
-      'teacher': 'Mr. Anderson',
-      'date': 'Mar 26',
-      'color': const Color(0xFF1E88E5),
-      'icon': Icons.calculate,
-      'isNew': true,
-      'description': 'Complete guide to solving quadratic equations using the quadratic formula, factoring, and completing the square. Includes worked examples and practice problems.',
-    },
-    {
-      'title': 'Newton\'s Laws of Motion',
-      'subject': 'Physics',
-      'teacher': 'Ms. Johnson',
-      'date': 'Mar 24',
-      'color': const Color(0xFF43A047),
-      'icon': Icons.science,
-      'isNew': false,
-      'description': 'An overview of Newton\'s three laws of motion with real-world applications, free-body diagrams, and problem-solving strategies.',
-    },
-    {
-      'title': 'Climate Change Essay',
-      'subject': 'English',
-      'teacher': 'Ms. Williams',
-      'date': 'Due Apr 2',
-      'color': const Color(0xFFFF7043),
-      'icon': Icons.edit_note,
-      'isNew': false,
-      'isAssignment': true,
-      'description': 'Write a 1000-word persuasive essay on the impact of climate change, citing at least three scientific sources.',
-    },
-    {
-      'title': 'Human Circulatory System',
-      'subject': 'Biology',
-      'teacher': 'Dr. Lee',
-      'date': 'Mar 22',
-      'color': const Color(0xFF8E24AA),
-      'icon': Icons.biotech,
-      'isNew': false,
-      'description': 'Detailed study material covering the heart, blood vessels, blood composition, and the circulatory pathway through the body.',
-    },
-  ];
+  String _board = 'CBSE';
+  String _userName = 'Student';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final b = await AuthService.getUserBoard();
+    final n = await AuthService.getUserName();
+    if (mounted) setState(() { _board = b; _userName = n; });
+  }
+
+  List<Map<String, dynamic>> get _materials {
+    List<Map<String, dynamic>> base = [
+      {
+        'title': '$_board Midterm Practice Test',
+        'subject': 'Mathematics',
+        'teacher': 'Mr. Anderson',
+        'date': 'Available Now',
+        'color': const Color(0xFFE53935),
+        'icon': Icons.assignment,
+        'isNew': true,
+        'isTest': true,
+        'description': 'A comprehensive practice test aligned with $_board guidelines covering chapters 1–8.',
+      },
+      {
+        'title': 'Quadratic Equations Guide',
+        'subject': 'Mathematics',
+        'teacher': 'Mr. Anderson',
+        'date': 'Mar 26',
+        'color': const Color(0xFF1E88E5),
+        'icon': Icons.calculate,
+        'isNew': true,
+        'description': 'Complete guide to solving quadratic equations for the $_board syllabus.',
+      },
+    ];
+
+    if (_board == 'ICSE') {
+      base.add({
+        'title': 'Shakespearean Sonnets',
+        'subject': 'English Literature',
+        'teacher': 'Ms. Williams',
+        'date': 'Mar 24',
+        'color': const Color(0xFFFF7043),
+        'icon': Icons.menu_book,
+        'isNew': false,
+        'description': 'ICSE special module on classic sonnets.',
+      });
+    } else if (_board == 'SSC') {
+      base.add({
+        'title': 'State History & Civics',
+        'subject': 'Social Studies',
+        'teacher': 'Mr. Patil',
+        'date': 'Mar 22',
+        'color': const Color(0xFF8E24AA),
+        'icon': Icons.account_balance,
+        'isNew': false,
+        'description': 'SSC local history overview.',
+      });
+    } else {
+      // CBSE default
+      base.add({
+        'title': 'Newton\'s Laws of Motion',
+        'subject': 'Physics',
+        'teacher': 'Ms. Johnson',
+        'date': 'Mar 24',
+        'color': const Color(0xFF43A047),
+        'icon': Icons.science,
+        'isNew': false,
+        'description': 'NCERT standard chapter on laws of motion.',
+      });
+    }
+    return base;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -107,7 +131,11 @@ class _StudyMaterialState extends State<StudyMaterial> {
       Navigator.push(
         context,
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => MaterialDetailView(material: material),
+          pageBuilder: (context, animation, secondaryAnimation) => MaterialDetailView(
+            material: material,
+            board: _board,
+            userName: _userName,
+          ),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const begin = Offset(0.0, 1.0);
             const end = Offset.zero;
@@ -225,8 +253,10 @@ class _MaterialCard extends StatelessWidget {
 
 class MaterialDetailView extends StatefulWidget {
   final Map<String, dynamic> material;
+  final String board;
+  final String userName;
 
-  const MaterialDetailView({super.key, required this.material});
+  const MaterialDetailView({super.key, required this.material, this.board = 'CBSE', this.userName = 'Student'});
 
   @override
   State<MaterialDetailView> createState() => _MaterialDetailViewState();
@@ -464,13 +494,34 @@ class _MaterialDetailViewState extends State<MaterialDetailView> with SingleTick
               icon: Icons.menu_book,
               title: 'Reading Material',
               color: color,
-              child: Text(
-                'Full text content will appear here.\n\nThis section displays the complete written material shared by the teacher in an accessible, readable format with proper line spacing and font sizing.\n\nKey topics covered include definitions, worked examples, and summary notes with highlighted formulas and important concepts.',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppTheme.textPrimary,
-                  height: 1.7,
-                ),
+              child: Stack(
+                children: [
+                   // Watermark overlay
+                   Positioned.fill(
+                     child: Opacity(
+                       opacity: 0.1,
+                       child: Transform.rotate(
+                         angle: -0.5,
+                         child: Center(
+                           child: Text(
+                             'AUTHORIZED CONTENT\n${widget.board}\nRegistered to: ${widget.userName}',
+                             textAlign: TextAlign.center,
+                             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
+                           ),
+                         ),
+                       ),
+                     ),
+                   ),
+                   // Content
+                   Text(
+                    'Full text content will appear here.\n\nThis section displays the complete written material shared by the teacher in an accessible, readable format with proper line spacing and font sizing.\n\nKey topics covered include definitions, worked examples, and summary notes with highlighted formulas and important concepts.',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.textPrimary,
+                      height: 1.7,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),

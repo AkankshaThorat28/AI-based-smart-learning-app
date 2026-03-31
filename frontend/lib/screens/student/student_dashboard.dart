@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/accessibility_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../services/auth_service.dart';
+import '../auth/login_screen.dart';
 import 'lesson_screen.dart';
 
 class StudentDashboard extends StatefulWidget {
@@ -13,6 +15,46 @@ class StudentDashboard extends StatefulWidget {
 }
 
 class _StudentDashboardState extends State<StudentDashboard> {
+  String _userName = 'USER';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final name = await AuthService.getUserName();
+    if (mounted) setState(() => _userName = name.toUpperCase());
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sign Out?'),
+        content: const Text('You will be returned to the login screen.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              await AuthService.logout();
+              if (mounted) {
+                Navigator.pop(ctx);
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (_) => false,
+                );
+              }
+            },
+            child: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final a11y = Provider.of<AccessibilityProvider>(context);
@@ -35,7 +77,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
             ),
             const SizedBox(width: 8),
             const Text(
-              'Elevate AI',
+              'Saamya AI',
               style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: AppTheme.textPrimary),
             ),
           ],
@@ -47,7 +89,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
             child: IconButton(
               icon: const Icon(Icons.settings_outlined, color: AppTheme.textSecondary),
               tooltip: 'Settings',
-              onPressed: () {},
+              onPressed: () => _showLogoutDialog(context),
             ),
           ),
           const SizedBox(width: 8),
@@ -64,7 +106,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'WELCOME BACK, ALEX',
+                    'WELCOME BACK, $_userName',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,

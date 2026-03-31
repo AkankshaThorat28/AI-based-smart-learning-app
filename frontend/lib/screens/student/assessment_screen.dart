@@ -210,7 +210,7 @@ class _AssessmentScreenState extends State<AssessmentScreen> with SingleTickerPr
               child: const Icon(Icons.auto_awesome, color: Colors.white, size: 16),
             ),
             const SizedBox(width: 8),
-            const Text('Elevate AI', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppTheme.textPrimary)),
+            const Text('Saamya AI', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppTheme.textPrimary)),
           ],
         ),
         actions: [

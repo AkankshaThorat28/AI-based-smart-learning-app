@@ -5,8 +5,29 @@ import '../../providers/accessibility_provider.dart';
 import '../../utils/app_alerts.dart';
 import 'study_material.dart';
 
-class StudentSettings extends StatelessWidget {
+import '../../services/auth_service.dart';
+import '../../utils/tr.dart';
+
+class StudentSettings extends StatefulWidget {
   const StudentSettings({super.key});
+
+  @override
+  State<StudentSettings> createState() => _StudentSettingsState();
+}
+
+class _StudentSettingsState extends State<StudentSettings> {
+  String _userEmail = 'Loading...';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final email = await AuthService.getUserEmail();
+    if (mounted) setState(() => _userEmail = email.isNotEmpty ? email : 'No email');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,19 +40,19 @@ class StudentSettings extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Settings', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppTheme.textPrimary, letterSpacing: -0.5)),
+                Text('Settings'.tr(context), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppTheme.textPrimary, letterSpacing: -0.5)),
                 const SizedBox(height: 4),
-                Text('Customize your experience', style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+                Text('Customize your experience'.tr(context), style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
                 const SizedBox(height: 24),
 
                 // ─── Account & Profile ─────────────────────────
-                _buildSectionHeader('Account & Profile', Icons.person_outline),
+                _buildSectionHeader('Account & Profile'.tr(context), Icons.person_outline),
                 _buildCard([
-                  _InfoTile(icon: Icons.email_outlined, label: 'Email', value: 'alex@school.edu'),
+                  _InfoTile(icon: Icons.email_outlined, label: 'Email'.tr(context), value: _userEmail),
                   const Divider(height: 1),
-                  _InfoTile(icon: Icons.phone_outlined, label: 'Contact', value: '+1 (555) 123-4567'),
+                  _InfoTile(icon: Icons.phone_outlined, label: 'Contact'.tr(context), value: '+1 (555) 123-4567'),
                   const Divider(height: 1),
-                  _InfoTile(icon: Icons.lock_outline, label: 'Password', value: '••••••••', trailing: TextButton(onPressed: () {
+                  _InfoTile(icon: Icons.lock_outline, label: 'Password'.tr(context), value: '••••••••', trailing: TextButton(onPressed: () {
                     AppAlerts.showInfo(context, 'Password change dialog opening...');
                   }, child: const Text('Change', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)))),
                 ]),
@@ -95,11 +116,11 @@ class StudentSettings extends StatelessWidget {
                 const SizedBox(height: 24),
 
                 // ─── Visual Accessibility ──────────────────────
-                _buildSectionHeader('Visual Accessibility', Icons.visibility_outlined),
+                _buildSectionHeader('Visual Accessibility'.tr(context), Icons.visibility_outlined),
                 _buildCard([
                   _ToggleTile(
                     icon: Icons.self_improvement,
-                    label: 'Zen Mode',
+                    label: 'Zen Mode'.tr(context),
                     subtitle: 'Hide gamification & non-essential UI',
                     value: a11y.zenMode,
                     onChanged: (_) => a11y.toggleZenMode(),
@@ -107,7 +128,7 @@ class StudentSettings extends StatelessWidget {
                   const Divider(height: 1),
                   _ToggleTile(
                     icon: Icons.contrast,
-                    label: 'High Contrast',
+                    label: 'High Contrast'.tr(context),
                     subtitle: 'Increase color contrast for visibility',
                     value: a11y.highContrast,
                     onChanged: (_) => a11y.toggleHighContrast(),
@@ -116,11 +137,11 @@ class StudentSettings extends StatelessWidget {
                 const SizedBox(height: 24),
 
                 // ─── Typography ────────────────────────────────
-                _buildSectionHeader('Typography', Icons.text_fields),
+                _buildSectionHeader('Typography'.tr(context), Icons.text_fields),
                 _buildCard([
                   _ToggleTile(
                     icon: Icons.font_download_outlined,
-                    label: 'Dyslexia-Friendly Font',
+                    label: 'Dyslexia-Friendly Font'.tr(context),
                     subtitle: 'Switch to OpenDyslexic-style font',
                     value: a11y.dyslexiaFont,
                     onChanged: (_) => a11y.toggleDyslexiaFont(),
@@ -128,7 +149,7 @@ class StudentSettings extends StatelessWidget {
                   const Divider(height: 1),
                   _SliderTile(
                     icon: Icons.format_size,
-                    label: 'Text Scaling',
+                    label: 'Text Scaling'.tr(context),
                     value: a11y.textSizeScale,
                     min: 0.8,
                     max: 2.0,
@@ -139,11 +160,11 @@ class StudentSettings extends StatelessWidget {
                 const SizedBox(height: 24),
 
                 // ─── Audio & Voice ─────────────────────────────
-                _buildSectionHeader('Audio & Voice Guidance', Icons.volume_up_outlined),
+                _buildSectionHeader('Audio & Voice Guidance'.tr(context), Icons.volume_up_outlined),
                 _buildCard([
                   _ToggleTile(
                     icon: Icons.record_voice_over_outlined,
-                    label: 'Voice Navigation',
+                    label: 'Voice Navigation'.tr(context),
                     subtitle: 'Navigate app using voice commands',
                     value: a11y.voiceNavigation,
                     onChanged: (_) => a11y.toggleVoiceNavigation(),
@@ -151,10 +172,28 @@ class StudentSettings extends StatelessWidget {
                   const Divider(height: 1),
                   _ToggleTile(
                     icon: Icons.closed_caption_outlined,
-                    label: 'Closed Captions',
+                    label: 'Closed Captions'.tr(context),
                     subtitle: 'Show captions for audio content',
                     value: a11y.closedCaptions,
                     onChanged: (_) => a11y.toggleClosedCaptions(),
+                  ),
+                ]),
+                const SizedBox(height: 24),
+
+                // ─── Language ──────────────────────────────────
+                _buildSectionHeader('Language / भाषा'.tr(context), Icons.language),
+                _buildCard([
+                  ListTile(
+                    leading: const Icon(Icons.translate, color: AppTheme.brandPrimary, size: 20),
+                    title: Text('App Language'.tr(context)),
+                    subtitle: Text(a11y.language == 'en' ? 'English' : 'Hindi (हिंदी)'),
+                    trailing: Switch(
+                      value: a11y.language == 'hi',
+                      onChanged: (val) {
+                        a11y.setLanguage(val ? 'hi' : 'en');
+                        AppAlerts.showSuccess(context, val ? 'भाषा हिंदी में बदली गई' : 'Language set to English');
+                      },
+                    ),
                   ),
                 ]),
                 const SizedBox(height: 32),

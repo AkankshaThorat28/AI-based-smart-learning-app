@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/accessibility_provider.dart';
+import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 import 'login_screen.dart';
 import '../main_nav.dart';
+import '../student/blind_dashboard_screen.dart';
 
 class CreateAccountScreen extends StatefulWidget {
   const CreateAccountScreen({super.key});
@@ -14,52 +16,79 @@ class CreateAccountScreen extends StatefulWidget {
 }
 
 class _CreateAccountScreenState extends State<CreateAccountScreen> {
-  final _nameController = TextEditingController();
+  final _nameController  = TextEditingController();
   final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _agreedToTerms = false;
-  String _selectedRole = 'student';
+  final _passController  = TextEditingController();
+
+  bool _agreedToTerms      = false;
+  String _selectedRole     = 'student';
   String _selectedDisability = 'none';
-  bool _obscurePassword = true;
+  String _selectedBoard    = 'CBSE'; // Default board
+  bool _obscurePassword    = true;
+  bool _isLoading          = false;
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _passwordController.dispose();
+    _passController.dispose();
     super.dispose();
   }
 
-  void _handleCreateAccount() {
-    if (_nameController.text.isEmpty || _emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields'), behavior: SnackBarBehavior.floating),
-      );
+  Future<void> _handleCreateAccount() async {
+    if (_nameController.text.isEmpty ||
+        _emailController.text.isEmpty ||
+        _passController.text.isEmpty) {
+      _showSnack('Please fill in all fields');
       return;
     }
     if (!_agreedToTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please agree to the Terms of Service'), behavior: SnackBarBehavior.floating),
-      );
+      _showSnack('Please agree to the Terms of Service');
       return;
     }
-    // Apply disability-aware defaults
-    Provider.of<AccessibilityProvider>(context, listen: false).applyDefaults(_selectedDisability);
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainNav()));
+
+    setState(() => _isLoading = true);
+    try {
+      final user = await ApiService.register(
+        name:       _nameController.text.trim(),
+        email:      _emailController.text.trim(),
+        password:   _passController.text,
+        role:       _selectedRole,
+        disability: _selectedRole == 'student' ? '${_selectedDisability}|${_selectedBoard}' : 'none',
+      );
+
+      // Persist session
+      await AuthService.saveSession(user);
+
+      // Apply accessibility defaults based on disability
+      if (mounted) {
+        final realDisability = (user['disability'] as String).split('|')[0];
+        Provider.of<AccessibilityProvider>(context, listen: false)
+            .applyDefaults(realDisability);
+            
+        final isBlind = realDisability == 'visual' || realDisability == 'blind';
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => isBlind ? const BlindDashboardScreen() : const MainNav(),
+          ),
+        );
+      }
+    } on ApiException catch (e) {
+
+      _showSnack(e.message);
+    } catch (e) {
+      _showSnack('Could not connect to server. Is the backend running?');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
-  Future<void> _handleGoogleSignIn() async {
-    final Uri url = Uri.parse('https://accounts.google.com/o/oauth2/v2/auth/oauthchooseaccount?redirect_uri=https%3A%2F%2Fdevelopers.google.com%2Foauthplayground&prompt=consent&response_type=code&client_id=407408718192.apps.googleusercontent.com&scope=email&access_type=offline&flowName=GeneralOAuthFlow');
-    try {
-      await launchUrl(url);
-      // Simulate OAuth redirect delay
-      await Future.delayed(const Duration(seconds: 2));
-      if (mounted) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainNav()));
-      }
-    } catch (e) {
-      debugPrint('Launch error: $e');
-    }
+  void _showSnack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
+    );
   }
 
   @override
@@ -83,7 +112,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     );
   }
 
-  // ─── Form Card ────────────────────────────────────────────
   Widget _buildFormCard(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -93,14 +121,16 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 20, offset: const Offset(0, 4)),
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 20,
+              offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Header
           const Text(
             'Create an account',
             style: TextStyle(
@@ -117,7 +147,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
           ),
           const SizedBox(height: 28),
 
-          // Full Name
           _buildLabel('Full Name'),
           const SizedBox(height: 6),
           _buildTextField(
@@ -127,7 +156,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Email
           _buildLabel('Email Address'),
           const SizedBox(height: 6),
           _buildTextField(
@@ -138,21 +166,23 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Password
           _buildLabel('Password'),
           const SizedBox(height: 6),
           _buildTextField(
-            controller: _passwordController,
+            controller: _passController,
             icon: Icons.lock_outline,
             hint: '••••••••••••',
             obscure: _obscurePassword,
             suffix: IconButton(
               icon: Icon(
-                _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                _obscurePassword
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
                 size: 20,
                 color: AppTheme.textTertiary,
               ),
-              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              onPressed: () =>
+                  setState(() => _obscurePassword = !_obscurePassword),
             ),
           ),
           const SizedBox(height: 16),
@@ -166,25 +196,34 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                 height: 20,
                 child: Checkbox(
                   value: _agreedToTerms,
-                  onChanged: (v) => setState(() => _agreedToTerms = v ?? false),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  onChanged: (v) =>
+                      setState(() => _agreedToTerms = v ?? false),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4)),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text.rich(
                   TextSpan(
-                    style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, height: 1.4),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                        height: 1.4),
                     children: [
                       const TextSpan(text: 'I agree to the '),
                       TextSpan(
                         text: 'Terms of Service',
-                        style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.brandPrimary),
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.brandPrimary),
                       ),
                       const TextSpan(text: ' and '),
                       TextSpan(
                         text: 'Privacy Policy',
-                        style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.brandPrimary),
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.brandPrimary),
                       ),
                       const TextSpan(text: '.'),
                     ],
@@ -215,6 +254,33 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
           const SizedBox(height: 24),
 
           if (_selectedRole == 'student') ...[
+            // Board Selector
+            _buildLabel('School Board'),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F5),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  value: _selectedBoard,
+                  items: const [
+                    DropdownMenuItem(value: 'CBSE', child: Text('CBSE', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
+                    DropdownMenuItem(value: 'ICSE', child: Text('ICSE', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
+                    DropdownMenuItem(value: 'SSC', child: Text('SSC (State Board)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
+                  ],
+                  onChanged: (v) => setState(() => _selectedBoard = v ?? 'CBSE'),
+                  style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                  icon: const Icon(Icons.arrow_drop_down, color: AppTheme.textTertiary),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Disability Selector
             _buildLabel('Any Physical Disabilities?'),
             const SizedBox(height: 8),
             Container(
@@ -228,14 +294,37 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                   isExpanded: true,
                   value: _selectedDisability,
                   items: const [
-                    DropdownMenuItem(value: 'none', child: Text('No Physical Disabilities', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
-                    DropdownMenuItem(value: 'visual', child: Text('Visually Impaired', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
-                    DropdownMenuItem(value: 'deaf', child: Text('Deaf', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
-                    DropdownMenuItem(value: 'voice', child: Text('Voice Impaired', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
+                    DropdownMenuItem(
+                        value: 'none',
+                        child: Text('No Physical Disabilities',
+                            style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500))),
+                    DropdownMenuItem(
+                        value: 'visual',
+                        child: Text('Visually Impaired',
+                            style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500))),
+                    DropdownMenuItem(
+                        value: 'deaf',
+                        child: Text('Deaf',
+                            style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500))),
+                    DropdownMenuItem(
+                        value: 'voice',
+                        child: Text('Voice Impaired',
+                            style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500))),
                   ],
-                  onChanged: (v) => setState(() => _selectedDisability = v ?? 'none'),
-                  style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
-                  icon: const Icon(Icons.arrow_drop_down, color: AppTheme.textTertiary),
+                  onChanged: (v) =>
+                      setState(() => _selectedDisability = v ?? 'none'),
+                  style: const TextStyle(
+                      color: AppTheme.textPrimary, fontSize: 14),
+                  icon: const Icon(Icons.arrow_drop_down,
+                      color: AppTheme.textTertiary),
                 ),
               ),
             ),
@@ -247,75 +336,31 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: _handleCreateAccount,
+              onPressed: _isLoading ? null : _handleCreateAccount,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.brandPrimary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(26)),
                 elevation: 2,
               ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('Create Account', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                  SizedBox(width: 8),
-                  Icon(Icons.arrow_forward, size: 18),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 28),
-
-          // Divider
-          Row(
-            children: [
-              Expanded(child: Divider(color: Colors.grey.shade200)),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'OR CONTINUE WITH',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.textTertiary, letterSpacing: 1.5),
-                ),
-              ),
-              Expanded(child: Divider(color: Colors.grey.shade200)),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Google button
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: OutlinedButton(
-              onPressed: _handleGoogleSignIn,
-              style: OutlinedButton.styleFrom(
-                backgroundColor: const Color(0xFFF3F4F5),
-                side: BorderSide(color: Colors.grey.shade200),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Google icon placeholder
-                  Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.grey.shade300, width: 0.5),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Create Account',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w700, fontSize: 14)),
+                        SizedBox(width: 8),
+                        Icon(Icons.arrow_forward, size: 18),
+                      ],
                     ),
-                    child: const Center(
-                      child: Text('G', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF4285F4))),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Continue with Google',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.brandPrimary),
-                  ),
-                ],
-              ),
             ),
           ),
           const SizedBox(height: 20),
@@ -330,7 +375,10 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
               ),
               TextButton(
                 onPressed: () {
-                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
                 },
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -339,7 +387,10 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                 ),
                 child: Text(
                   'Log In',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.brandPrimary),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: AppTheme.brandPrimary),
                 ),
               ),
             ],
@@ -388,7 +439,8 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
           hintText: hint,
           hintStyle: TextStyle(color: AppTheme.textTertiary, fontSize: 14),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
       ),
     );

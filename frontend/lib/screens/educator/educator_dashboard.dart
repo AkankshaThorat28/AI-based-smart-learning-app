@@ -26,7 +26,7 @@ class EducatorDashboard extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Elevate AI', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppTheme.textPrimary)),
+                const Text('Saamya AI', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppTheme.textPrimary)),
                 Text(
                   'ST. CALLISTUS ACADEMY',
                   style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppTheme.textTertiary, letterSpacing: 1),

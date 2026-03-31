@@ -27,7 +27,7 @@ class MyApp extends StatelessWidget {
     return Consumer<AccessibilityProvider>(
       builder: (context, a11y, child) {
         return MaterialApp(
-          title: 'Elevate AI',
+          title: 'Saamya AI',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.getTheme(
             isHighContrast: a11y.highContrast,
